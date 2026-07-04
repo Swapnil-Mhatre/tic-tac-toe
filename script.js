@@ -4,29 +4,59 @@ function gameBoard() {
   let board = [];
   const winningPatterns = [
     // Rows
-    [[0, 0], [0, 1], [0, 2]],
-    [[1, 0], [1, 1], [1, 2]],
-    [[2, 0], [2, 1], [2, 2]],
+    [
+      [0, 0],
+      [0, 1],
+      [0, 2],
+    ],
+    [
+      [1, 0],
+      [1, 1],
+      [1, 2],
+    ],
+    [
+      [2, 0],
+      [2, 1],
+      [2, 2],
+    ],
     // Columns
-    [[0, 0], [1, 0], [2, 0]],
-    [[0, 1], [1, 1], [2, 1]],
-    [[0, 2], [1, 2], [2, 2]],
+    [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+    ],
+    [
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ],
+    [
+      [0, 2],
+      [1, 2],
+      [2, 2],
+    ],
     // Diagonals
-    [[0, 0], [1, 1], [2, 2]],
-    [[0, 2], [1, 1], [2, 0]]
+    [
+      [0, 0],
+      [1, 1],
+      [2, 2],
+    ],
+    [
+      [0, 2],
+      [1, 1],
+      [2, 0],
+    ],
   ];
   let isGameOver = false;
 
   const initBoard = () => {
-    board = [];
     for (let i = 0; i < rows; i++) {
       board[i] = [];
       for (let j = 0; j < cols; j++) {
         board[i].push(cell());
       }
     }
-    isGameOver = false;
-  }
+  };
 
   const getBoard = () => board;
 
@@ -34,11 +64,11 @@ function gameBoard() {
     const reservedCell = board[row][col].getValue() === 0;
     if (reservedCell) {
       board[row][col].addToken(player);
-      }
+    }
     if (checkWinner(player)) {
       isGameOver = true;
       gameOver(player);
-    } 
+    }
   };
 
   const gameOver = (player) => {
@@ -46,15 +76,13 @@ function gameBoard() {
     const gameContainer = document.querySelector(".game_container");
     const declaration = document.querySelector(".declaration");
 
-    declaration.textContent = `${player} has won the game!!`
+    declaration.textContent = `${player} has won the game!!`;
     gameContainer.style.display = "none";
     gameOverCon.style.display = "flex";
-  }
+  };
 
   const printBoard = () => {
-    return board.map((row) =>
-      row.map((cell) => cell.getValue())
-    );
+    return board.map((row) => row.map((cell) => cell.getValue()));
   };
 
   const checkWinner = (player) => {
@@ -67,7 +95,7 @@ function gameBoard() {
 
   initBoard();
 
-  return {initBoard, getBoard, printBoard, makeMove, checkWinner };
+  return { initBoard, getBoard, printBoard, makeMove, checkWinner };
 }
 
 function cell() {
@@ -95,26 +123,35 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
   ];
 
   let activePlayer = players[0];
+  let notActivePlayer = players[1];
 
   const switchplayer = () => {
     activePlayer = activePlayer === players[0] ? players[1] : players[0];
+    notActivePlayer = notActivePlayer === players[1] ? players[0] : players[1];
   };
   const getActivePlayer = () => activePlayer;
-  const setActivePlayer = () => activePlayer = players[0];
+  const setPlayers = () => (
+    (activePlayer = players[0]),
+    (notActivePlayer = players[1])
+  );
 
+  // used for logging the game into console before ui implementation
   const printNewRound = () => {
     board.printBoard();
   };
 
   const playRound = (row, column) => {
-    board.makeMove(row, column, getActivePlayer().marker);
-    switchplayer();
-    printNewRound();
+    if (board.getBoard()[row][column].getValue() === 0) switchplayer();
+    board.makeMove(row, column, notActivePlayer.marker);
   };
 
-  printNewRound();
-
-  return {playRound, getActivePlayer, setActivePlayer, getBoard: board.getBoard, initBoard: board.initBoard };
+  return {
+    playRound,
+    getActivePlayer,
+    setPlayers,
+    getBoard: board.getBoard,
+    initBoard: board.initBoard,
+  };
 }
 
 function ScreenController() {
@@ -123,7 +160,7 @@ function ScreenController() {
   const status = document.querySelector(".status");
   const startBtn = document.querySelector("#start_game");
   const restartBtn = document.querySelector("#reset_btn");
-  
+
   const updateScreen = () => {
     const board = display.getBoard();
     const activePlayer = display.getActivePlayer();
@@ -149,7 +186,7 @@ function ScreenController() {
     });
   };
 
-  function gameLaunch () {
+  function gameLaunch() {
     const startCon = document.querySelector(".start_game");
     const gameContainer = document.querySelector(".game_container");
     startCon.style.display = "none";
@@ -157,9 +194,9 @@ function ScreenController() {
   }
   startBtn.addEventListener("click", gameLaunch);
 
-  function restartGame () {
+  function restartGame() {
     display.initBoard();
-    display.setActivePlayer();
+    display.setPlayers();
     gameLaunch();
     updateScreen();
   }
