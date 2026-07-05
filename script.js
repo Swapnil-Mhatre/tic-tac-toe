@@ -48,6 +48,7 @@ function gameBoard() {
     ],
   ];
   let isGameOver = false;
+  let isGameDraw = false;
 
   const initBoard = () => {
     for (let i = 0; i < rows; i++) {
@@ -59,26 +60,23 @@ function gameBoard() {
   };
 
   const getBoard = () => board;
-
-  const makeMove = (row, col, player) => {
-    const reservedCell = board[row][col].getValue() === 0;
-    if (reservedCell) {
-      board[row][col].addToken(player);
-    }
-    if (checkWinner(player)) {
-      isGameOver = true;
-      gameOver(player);
-    }
+  const getDrawStatus = () => isGameDraw;
+  const getGameStatus = () => isGameOver;
+  const resetGameStatus = () => {
+    isGameOver = false;
+    isGameDraw = false;
   };
 
-  const gameOver = (player) => {
-    const gameOverCon = document.querySelector(".game_over");
-    const gameContainer = document.querySelector(".game_container");
-    const declaration = document.querySelector(".declaration");
+  const makeMove = (row, col, player) => {
+    if (board[row][col].getValue() !== 0) {
+      return false;
+    }
+    board[row][col].addToken(player);
+    if (checkWinner(player) || checkDraw()) {
+      isGameOver = true;
+    }
 
-    declaration.textContent = `${player} has won the game!!`;
-    gameContainer.style.display = "none";
-    gameOverCon.style.display = "flex";
+    return true;
   };
 
   const printBoard = () => {
@@ -93,9 +91,23 @@ function gameBoard() {
     });
   };
 
+  const checkDraw = () => {
+    isGameDraw = true;
+    return board.every((row) => row.every((col) => col.getValue() !== 0));
+  };
+
   initBoard();
 
-  return { initBoard, getBoard, printBoard, makeMove, checkWinner };
+  return {
+    initBoard,
+    getBoard,
+    printBoard,
+    makeMove,
+    checkWinner,
+    getGameStatus,
+    getDrawStatus,
+    resetGameStatus,
+  };
 }
 
 function cell() {
@@ -123,17 +135,12 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
   ];
 
   let activePlayer = players[0];
-  let notActivePlayer = players[1];
 
   const switchplayer = () => {
     activePlayer = activePlayer === players[0] ? players[1] : players[0];
-    notActivePlayer = notActivePlayer === players[1] ? players[0] : players[1];
   };
   const getActivePlayer = () => activePlayer;
-  const setPlayers = () => (
-    (activePlayer = players[0]),
-    (notActivePlayer = players[1])
-  );
+  const setActivePlayer = () => (activePlayer = players[0]);
 
   // used for logging the game into console before ui implementation
   const printNewRound = () => {
@@ -141,16 +148,21 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
   };
 
   const playRound = (row, column) => {
-    if (board.getBoard()[row][column].getValue() === 0) switchplayer();
-    board.makeMove(row, column, notActivePlayer.marker);
+    const moved = board.makeMove(row, column, activePlayer.marker);
+
+    if (moved) switchplayer();
+    printNewRound();
   };
 
   return {
     playRound,
     getActivePlayer,
-    setPlayers,
+    setActivePlayer,
     getBoard: board.getBoard,
     initBoard: board.initBoard,
+    isGameOver: board.getGameStatus,
+    isGameDraw: board.getDrawStatus,
+    resetGameStatus: board.resetGameStatus,
   };
 }
 
@@ -194,9 +206,24 @@ function ScreenController() {
   }
   startBtn.addEventListener("click", gameLaunch);
 
+  const gameOver = (player = "X") => {
+    const gameOverCon = document.querySelector(".game_over");
+    const gameContainer = document.querySelector(".game_container");
+    const declaration = document.querySelector(".declaration");
+    const isDraw = display.isGameDraw();
+
+    if (isDraw) declaration.textContent = `Game is Draw nobody Won`;
+    else declaration.textContent = `${player} has won the game!!`;
+    gameContainer.style.display = "none";
+    gameOverCon.style.display = "flex";
+  };
+
   function restartGame() {
+    const gameOverCon = document.querySelector(".game_over");
+    gameOverCon.style.display = "none";
+    display.resetGameStatus();
     display.initBoard();
-    display.setPlayers();
+    display.setActivePlayer();
     gameLaunch();
     updateScreen();
   }
@@ -205,9 +232,11 @@ function ScreenController() {
   function clickHandlerBoard(e) {
     const selectedrow = e.target.dataset.row;
     const selectedColumn = e.target.dataset.col;
+    const activePlayer = display.getActivePlayer().marker;
 
     if (!selectedColumn && !selectedrow) return;
     display.playRound(selectedrow, selectedColumn);
+    if (display.isGameOver()) gameOver(activePlayer);
     updateScreen();
   }
   DOMBoard.addEventListener("click", clickHandlerBoard);
