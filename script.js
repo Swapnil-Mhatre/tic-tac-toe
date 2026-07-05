@@ -160,7 +160,7 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
 
   function computerMove() {
     function getRandomIndex() {
-      const boardArea = board.printBoard().length;
+      const boardArea = board.getBoard().length;
       return Math.floor(Math.random() * boardArea);
     }
 
@@ -173,7 +173,6 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
     }
 
     playRound(rowIdx, colIdx);
-    isComputerThinking = false;
   }
 
   const playRound = (row, column) => {
@@ -209,13 +208,30 @@ function ScreenController() {
   const gameMode = ["Vs Computer", "Vs Player"];
 
   const updateScreen = () => {
-    const board = display.getBoard();
+    renderBoard();
+    updateStatus();
+    handleComputerTurn();
+  };
+
+  function updateStatus() {
     const activePlayer = display.getActivePlayer().marker;
 
-    DOMBoard.textContent = "";
+    if (display.getComputerChance()) {
+      status.textContent = "Computer is thinking...";
+      return;
+    }
+
     if (display.getComputerVal()) {
-      status.textContent = "Your's Turn (X)";
-    } else status.textContent = `${activePlayer}'s turn `;
+      status.textContent = "Your Turn (X)";
+      return;
+    }
+
+    status.textContent = `${activePlayer}'s turn`;
+  }
+
+  function renderBoard() {
+    const board = display.getBoard();
+    DOMBoard.textContent = "";
 
     board.forEach((row, rowidx) => {
       const DOMrow = document.createElement("div");
@@ -233,6 +249,10 @@ function ScreenController() {
         DOMrow.appendChild(DOMcell);
       });
     });
+  }
+
+  function handleComputerTurn() {
+    const activePlayer = display.getActivePlayer().marker;
 
     if (
       display.getComputerVal() &&
@@ -240,14 +260,20 @@ function ScreenController() {
       activePlayer === "O"
     ) {
       display.setComputerChance(true);
-      status.textContent = "Computer is Thinking";
+
+      updateStatus();
+      
       setTimeout(() => {
         display.computerMove();
+
         if (display.isGameOver()) gameOver(activePlayer);
+
+        display.setComputerChance(false);
+
         updateScreen();
       }, 1000);
     }
-  };
+  }
 
   function createModeButtons(mode, container) {
     const button = document.createElement("button");
@@ -315,11 +341,11 @@ function ScreenController() {
     if (display.getComputerChance()) return;
     const selectedrow = e.target.dataset.row;
     const selectedColumn = e.target.dataset.col;
-    const activePlayer = display.getActivePlayer().marker;
+    const currentPlayer = display.getActivePlayer().marker;
 
     if (!selectedColumn && !selectedrow) return;
     display.playRound(selectedrow, selectedColumn);
-    if (display.isGameOver()) gameOver(activePlayer);
+    if (display.isGameOver()) gameOver(currentPlayer);
     updateScreen();
   }
   DOMBoard.addEventListener("click", clickHandlerBoard);
