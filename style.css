@@ -2,10 +2,11 @@
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-    font-family: "Gilroy",sans-serif;
+    font-family: "Gilroy", sans-serif;
 }
 
-html, body {
+html,
+body {
     width: 100%;
     height: 100%;
 }
@@ -19,6 +20,11 @@ html, body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+}
+
+.start_game {
+    flex-direction: row;
+    gap: 10px;
 }
 
 .game_container,
@@ -69,10 +75,14 @@ button:hover {
     color: #F6F8E2;
 }
 
-.message p{
+.message p {
     text-align: center;
     font-size: 30px;
     margin-bottom: 8px;
     font-weight: bolder;
     color: #3C3D42;
+}
+
+.buttons-container button {
+    margin-right: 10px;
 }

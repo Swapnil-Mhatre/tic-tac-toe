@@ -72,8 +72,11 @@ function gameBoard() {
       return false;
     }
     board[row][col].addToken(player);
-    if (checkWinner(player) || checkDraw()) {
+    if (checkWinner(player)) {
       isGameOver = true;
+    } else if (checkDraw()) {
+      isGameOver = true;
+      isGameDraw = true;
     }
 
     return true;
@@ -92,7 +95,6 @@ function gameBoard() {
   };
 
   const checkDraw = () => {
-    isGameDraw = true;
     return board.every((row) => row.every((col) => col.getValue() !== 0));
   };
 
@@ -122,6 +124,8 @@ function cell() {
 }
 
 function gameController(playerOne = "Player One", playerTwo = "Player Two") {
+  let isComputerPlaying = false;
+  let isComputerThinking = false;
   const board = gameBoard();
   const players = [
     {
@@ -136,6 +140,13 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
 
   let activePlayer = players[0];
 
+  const getComputerVal = () => isComputerPlaying;
+  const setComputer = (val) => (isComputerPlaying = val);
+  const getComputerChance = () => isComputerThinking;
+  const setComputerChance = (val) => {
+    isComputerThinking = val;
+  };
+
   const switchplayer = () => {
     activePlayer = activePlayer === players[0] ? players[1] : players[0];
   };
@@ -144,14 +155,30 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
 
   // used for logging the game into console before ui implementation
   const printNewRound = () => {
-    board.printBoard();
+    console.log(board.printBoard());
   };
+
+  function computerMove() {
+    function getRandomIndex() {
+      const boardArea = board.printBoard().length;
+      return Math.floor(Math.random() * boardArea);
+    }
+
+    let rowIdx = getRandomIndex();
+    let colIdx = getRandomIndex();
+
+    while (board.getBoard()[rowIdx][colIdx].getValue() !== 0) {
+      rowIdx = getRandomIndex();
+      colIdx = getRandomIndex();
+    }
+
+    playRound(rowIdx, colIdx);
+    isComputerThinking = false;
+  }
 
   const playRound = (row, column) => {
     const moved = board.makeMove(row, column, activePlayer.marker);
-
     if (moved) switchplayer();
-    printNewRound();
   };
 
   return {
@@ -163,6 +190,11 @@ function gameController(playerOne = "Player One", playerTwo = "Player Two") {
     isGameOver: board.getGameStatus,
     isGameDraw: board.getDrawStatus,
     resetGameStatus: board.resetGameStatus,
+    computerMove,
+    setComputer,
+    getComputerVal,
+    getComputerChance,
+    setComputerChance,
   };
 }
 
@@ -172,13 +204,18 @@ function ScreenController() {
   const status = document.querySelector(".status");
   const startBtn = document.querySelector("#start_game");
   const restartBtn = document.querySelector("#reset_btn");
+  const startCon = document.querySelector(".start_game");
+  const restartCon = document.querySelector(".buttons-container");
+  const gameMode = ["Vs Computer", "Vs Player"];
 
   const updateScreen = () => {
     const board = display.getBoard();
-    const activePlayer = display.getActivePlayer();
+    const activePlayer = display.getActivePlayer().marker;
 
     DOMBoard.textContent = "";
-    status.textContent = `${activePlayer.marker}'s turn `;
+    if (display.getComputerVal()) {
+      status.textContent = "Your's Turn (X)";
+    } else status.textContent = `${activePlayer}'s turn `;
 
     board.forEach((row, rowidx) => {
       const DOMrow = document.createElement("div");
@@ -196,15 +233,58 @@ function ScreenController() {
         DOMrow.appendChild(DOMcell);
       });
     });
+
+    if (
+      display.getComputerVal() &&
+      !display.isGameOver() &&
+      activePlayer === "O"
+    ) {
+      display.setComputerChance(true);
+      status.textContent = "Computer is Thinking";
+      setTimeout(() => {
+        display.computerMove();
+        if (display.isGameOver()) gameOver(activePlayer);
+        updateScreen();
+      }, 1000);
+    }
   };
 
+  function createModeButtons(mode, container) {
+    const button = document.createElement("button");
+    button.classList.add("mode");
+    button.textContent = mode;
+    button.dataset.mode = mode;
+
+    container.appendChild(button);
+  }
+
+  function chooseMode(evt) {
+    if (evt.target.dataset.mode === "Vs Computer") display.setComputer(true);
+    else display.setComputer(false);
+    updateScreen();
+    if (display.isGameOver()) {
+      restartGame();
+      return;
+    }
+    gameLaunch();
+  }
+
   function gameLaunch() {
-    const startCon = document.querySelector(".start_game");
     const gameContainer = document.querySelector(".game_container");
     startCon.style.display = "none";
     gameContainer.style.display = "flex";
   }
-  startBtn.addEventListener("click", gameLaunch);
+
+  function handleModeButton(button, container) {
+    button.style.display = "none";
+    gameMode.forEach((mode) => createModeButtons(mode, container));
+    const buttons = container.querySelectorAll("button.mode");
+    buttons.forEach((button) => button.addEventListener("click", chooseMode));
+  }
+
+  startBtn.addEventListener("click", () => {
+    handleModeButton(startBtn, startCon);
+  });
 
   const gameOver = (player = "X") => {
     const gameOverCon = document.querySelector(".game_over");
@@ -227,9 +307,12 @@ function ScreenController() {
     gameLaunch();
     updateScreen();
   }
-  restartBtn.addEventListener("click", restartGame);
+  restartBtn.addEventListener("click", () => {
+    handleModeButton(restartBtn, restartCon);
+  });
 
   function clickHandlerBoard(e) {
+    if (display.getComputerChance()) return;
     const selectedrow = e.target.dataset.row;
     const selectedColumn = e.target.dataset.col;
     const activePlayer = display.getActivePlayer().marker;
@@ -240,8 +323,6 @@ function ScreenController() {
     updateScreen();
   }
   DOMBoard.addEventListener("click", clickHandlerBoard);
-
-  updateScreen();
 }
 
 ScreenController();
